@@ -7,11 +7,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdbool.h>
 
 char msg1[] = "message 1";
 char msg2[] = "message 2";
-bool quit = false;
+struct sigaction sa_avant;
 
 void hdl_sys1(int n) {
   printf("hdl_sys1: Signal recu: %d\n", n);
@@ -39,22 +38,25 @@ void travail() __attribute__((noreturn));
 /* Petit raffinement pour le compilateur: cette fonction ne termine pas */
 
 void sighandlerINT(int signum) {
-  if (quit)
-    printf("Message: %s\n", msg2);
-  else
-    printf("Message: %s\n", msg1);
+  printf("Message: %s\n", msg1);
+}
+
+void sighandlerINT2(int signum) {
+  printf("Message: %s\n", msg2);
 }
 
 void sighandlerQUIT(int signum) {
   printf("change siginal\n");
-  quit = !quit;
+  sigaction(SIGINT, &sa_avant, &sa_avant);
 }
 
 int main() {
   printf("PID: %d\n", getpid());
-  struct sigaction sa_int, sa_quit;
+  struct sigaction sa_int, sa_int2, sa_quit;
   sa_int.sa_handler = &sighandlerINT;
+  sa_int2.sa_handler = &sighandlerINT2;
   sa_quit.sa_handler = &sighandlerQUIT;
+  sa_avant = sa_int2;
   sigaction(SIGINT, &sa_int, NULL);
   sigaction(SIGQUIT, &sa_quit, NULL);
   
