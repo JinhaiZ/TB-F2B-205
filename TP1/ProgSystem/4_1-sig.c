@@ -35,10 +35,14 @@ void travail() {
 void travail() __attribute__((noreturn));
 /* Petit raffinement pour le compilateur: cette fonction ne termine pas */
 
+void sighandler(int signum) {
+    printf("Caught signal %d, coming out...\n", signum);
+    exit(1);
+}
 
 int main() {
   printf("PID: %d\n", getpid());
-  
+  signal(SIGILL, sighandler);
   /* ? ? ? ? ? ? */
   
   travail();
