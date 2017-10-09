@@ -16,11 +16,11 @@ void fin_fils(int n) {
   fils = wait(&status);
   printf("Fils numero: %d\n", fils);
 
-  if (W ? ? ? ? ? ? ? (status))
-    printf("termine sur exit(%d)\n", W ? ? ? ? ? ? ? ? (status));
+  if (WIFEXITED(status))
+    printf("termine sur exit(%d)\n", WIFEXITED(status));
 
-  if (W ? ? ? ? ? ? ? ? ? (status))
-    printf("termine sur signal %d\n", W ? ? ? ? ? ? ? (status));
+  if (WIFSIGNALED(status))
+    printf("termine sur signal %d\n", WIFSIGNALED(status));
 
   exit(EXIT_SUCCESS);			/* pour terminer le pere */
 }
@@ -62,9 +62,10 @@ int main(int argc, char **argv) {
   pid = fork();
 
   if (pid != 0) {	/* Processus Pere */
+    signal(SIGCLD, fin_fils);
     travail();
   } else {		/* Processus Fils */
-    sleep(5);
+    sleep(30);
     exit(x);
   }
 }
