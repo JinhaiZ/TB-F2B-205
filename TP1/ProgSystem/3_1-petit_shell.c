@@ -14,6 +14,7 @@
 int main() {
   int pid, longueur;
   char tab[TABSIZE], *s;
+  int st;
 
   for (;;) {
     fputs("petit_shell...> ", stdout);	/* Affichage d'un prompt */
@@ -38,6 +39,19 @@ int main() {
      *   message d'erreur: fprintf(stderr, "Erreur dans le exec\n")
      * fin si
      */
+
+     switch(pid) {
+       case -1: //problem
+        fprintf(stderr, "Erreur de Shell\n");
+        exit(EXIT_FAILURE);
+       case 0: //we are in the child
+        st = execl(s, "", NULL);
+        if (st == -1) {
+          fprintf(stderr, "Erreur dans le execl\n");
+        }
+       default: //we are in the father
+        wait(NULL);
+     }
 
   }
 }
