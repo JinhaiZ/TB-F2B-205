@@ -22,6 +22,11 @@ void travail() {
 void travail() __attribute__((noreturn));
 /* Petit raffinement pour le compilateur: cette fonction ne termine pas */
 
+void sig_handler(int signum) {
+  printf("child signal recevied\n");
+  int pid = wait(NULL);
+  printf("child process %d terminated\n", pid);
+}
 
 int main() {
   int pid, longueur;
@@ -32,6 +37,7 @@ int main() {
   pid = fork();
 
   if (pid != 0) {	/* Processus Pere */
+    signal(SIGCLD, sig_handler);
     travail();
   } else {		/* Processus Fils */
     sleep(5);
