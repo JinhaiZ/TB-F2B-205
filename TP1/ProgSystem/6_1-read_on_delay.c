@@ -19,6 +19,7 @@
  * Sous Solaris on utilisera truss au lieu de strace
 */
 
+#include <signal.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -26,23 +27,55 @@
 #include <stdio.h>
 
 
+int orginal_flag = -1;
+
+void sighandlerINT (int signum) {
+  int flag = fcntl(0, F_SETFL, O_NONBLOCK);
+  if (flag < 0) {
+    perror("Fcntl F_SETFL");
+    exit(EXIT_FAILURE);
+  }
+  printf("ok\n");
+}
+
+void sighandlerQUIT (int signum) {
+  int flag = fcntl(0, F_SETFL, orginal_flag & ~O_NONBLOCK);
+  if (flag < 0) {
+    perror("Fcntl F_SETFL");
+    exit(EXIT_FAILURE);
+  }
+  printf("ko\n");
+}
+
+
 int main(int argc, char **argv) {
   int flag, r;
   char buf[10];
 
+  struct sigaction sa_int, sa_quit;
+  sa_int.sa_handler = &sighandlerINT;
+  sa_quit.sa_handler = &sighandlerQUIT;
+  sigaction(SIGINT, &sa_int, NULL);
+  sigaction(SIGQUIT, &sa_quit, NULL);
+ 
   if ((argc > 1) && (strcmp(argv[1], "true") == 0)) {
-    flag = fcntl(0, F_GETFL, 0);
-    if (flag < 0) {
+    orginal_flag = fcntl(0, F_GETFL);
+    if (orginal_flag < 0) {
       perror("Fcntl F_GETFL");
       exit(EXIT_FAILURE);
     }
     /* positionner maintenant le flag avec O_NONBLOCK */
-    flag = fcntl(0, ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?);
-
+    flag = fcntl(0, F_SETFL, O_NONBLOCK);
     if (flag < 0) {
       perror("Fcntl F_SETFL");
       exit(EXIT_FAILURE);
     }
+
+    flag = fcntl(0, F_SETFL, orginal_flag & ~O_NONBLOCK);
+    if (flag < 0) {
+      perror("Fcntl F_SETFL");
+      exit(EXIT_FAILURE);
+    
   }
 
   for (;;) {
@@ -51,5 +84,5 @@ int main(int argc, char **argv) {
       exit(EXIT_SUCCESS);
     }
   }
-
+  }
 }
