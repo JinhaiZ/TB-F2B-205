@@ -48,6 +48,7 @@ int main() {
         st = execlp(s, "", NULL);
         if (st == -1) {
           fprintf(stderr, "Erreur dans le execl\n");
+          exit(EXIT_FAILURE);
         }
        default: //we are in the father
         wait(NULL);
