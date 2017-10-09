@@ -32,8 +32,10 @@ int main(int argc, char **argv) {
   if (r < 0)
     erreur_grave("Stat");
 
-  printf("Fichier %s:  mode: %X  Taille: %ld  Proprietaire: %d\n",
-	argv[1], buffer->st_mode, buffer->st_size, buffer->st_uid);
+  struct passwd *pw = getpwuid(buffer->st_uid);
+
+  printf("Fichier %s:  mode: %X  Taille: %ld  Proprietaire: %s\n",
+	argv[1], buffer->st_mode, buffer->st_size, pw->pw_name);
 
   exit(EXIT_SUCCESS);
 }
