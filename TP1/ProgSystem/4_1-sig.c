@@ -7,12 +7,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 char msg1[] = "message 1";
 char msg2[] = "message 2";
-int prevSig = -1;
-
-int sig_avant = -1;		/* pour la question 4.3 */
+bool quit = false;
 
 void hdl_sys1(int n) {
   printf("hdl_sys1: Signal recu: %d\n", n);
@@ -39,27 +38,25 @@ void travail() {
 void travail() __attribute__((noreturn));
 /* Petit raffinement pour le compilateur: cette fonction ne termine pas */
 
-void sighandlerINT1(int signum) {
-  printf("Message: %s\n", msg1);
-}
-
-void sighandlerINT2(int signum) {
-  printf("Message: %s\n", msg2);
+void sighandlerINT(int signum) {
+  if (quit)
+    printf("Message: %s\n", msg2);
+  else
+    printf("Message: %s\n", msg1);
 }
 
 void sighandlerQUIT(int signum) {
   printf("change siginal\n");
-  sig_avant = signal(SIGINT, sig_avant);
+  quit = !quit;
 }
 
 int main() {
   printf("PID: %d\n", getpid());
-  signal(SIGINT, sighandlerINT1);
-  sig_avant = sighandlerINT2;
-  signal(SIGQUIT, sighandlerQUIT);
-  
-  /* ? ? ? ? ? ? */
+  struct sigaction sa_int, sa_quit;
+  sa_int.sa_handler = &sighandlerINT;
+  sa_quit.sa_handler = &sighandlerQUIT;
+  sigaction(SIGINT, &sa_int, NULL);
+  sigaction(SIGQUIT, &sa_quit, NULL);
   
   travail();
-  
 }
