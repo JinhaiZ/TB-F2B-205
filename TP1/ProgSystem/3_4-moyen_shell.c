@@ -14,7 +14,7 @@
 #define NB_ARG_MAX 256
 
 int main() {
-  int pid, longueur, i, n;
+  int pid, longueur, i, n, st;
   char tab[LINE_SIZE], *s;
   char *arg_tab[NB_ARG_MAX];
 
@@ -73,7 +73,18 @@ int main() {
 
     pid = fork();
 
-    switch (pid) {
-    ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?}
+    switch(pid) {
+      case -1: //problem
+       fprintf(stderr, "Erreur de Shell\n");
+       exit(EXIT_FAILURE);
+      case 0: //we are in the child
+       st = execvp(tab, arg_tab);
+       if (st == -1) {
+         fprintf(stderr, "Erreur dans le execl\n");
+         exit(EXIT_FAILURE);
+       }
+      default: //we are in the father
+       wait(NULL);
+    }
   }
 }
