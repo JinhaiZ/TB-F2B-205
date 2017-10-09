@@ -25,18 +25,18 @@ void erreur_grave(char *msg) {
 /* Fonction principale (fournie avec erreur(s?)) */
 
 int main(int argc, char **argv) {
-  struct stat *buffer = malloc(sizeof(struct stat));
+  struct stat buffer;
   int r;
 
-  r = stat(argv[1], buffer);
+  r = stat(argv[1], &buffer);
   if (r < 0)
     erreur_grave("Stat");
 
-  struct passwd *pw = getpwuid(buffer->st_uid);
+  struct passwd *pw = getpwuid(buffer.st_uid);
   struct passwd *pw2 = getpwuid(1000);
 
   printf("Fichier %s:  mode: %X  Taille: %ld  Proprietaire: %s Proprietaire2: %s\n",
-	argv[1], buffer->st_mode, buffer->st_size, pw->pw_name, pw2->pw_name);
+	argv[1], buffer.st_mode, buffer.st_size, pw->pw_name, pw2->pw_name);
 
   printf("pointer1: %p, pointer2: %p\n",
 	&pw, &pw2);
