@@ -25,7 +25,7 @@ void erreur_grave(char *msg) {
 /* Fonction principale (fournie avec erreur(s?)) */
 
 int main(int argc, char **argv) {
-  struct stat status, *buffer;
+  struct stat *buffer = malloc(sizeof(struct stat));
   int r;
 
   r = stat(argv[1], buffer);
