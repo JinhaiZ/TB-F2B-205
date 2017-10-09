@@ -33,9 +33,13 @@ int main(int argc, char **argv) {
     erreur_grave("Stat");
 
   struct passwd *pw = getpwuid(buffer->st_uid);
+  struct passwd *pw2 = getpwuid(1000);
 
-  printf("Fichier %s:  mode: %X  Taille: %ld  Proprietaire: %s\n",
-	argv[1], buffer->st_mode, buffer->st_size, pw->pw_name);
+  printf("Fichier %s:  mode: %X  Taille: %ld  Proprietaire: %s Proprietaire2: %s\n",
+	argv[1], buffer->st_mode, buffer->st_size, pw->pw_name, pw2->pw_name);
+
+  printf("pointer1: %p, pointer2: %p\n",
+	&pw, &pw2);
 
   exit(EXIT_SUCCESS);
 }
