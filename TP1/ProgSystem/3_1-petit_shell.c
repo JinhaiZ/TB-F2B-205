@@ -45,7 +45,7 @@ int main() {
         fprintf(stderr, "Erreur de Shell\n");
         exit(EXIT_FAILURE);
        case 0: //we are in the child
-        st = execl(s, "", NULL);
+        st = execlp(s, "", NULL);
         if (st == -1) {
           fprintf(stderr, "Erreur dans le execl\n");
         }
