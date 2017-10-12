@@ -108,7 +108,7 @@
 	}
 	```
 
-	**需要注意的是函数signal(SIGILL，sighandler)调用的返回值是之前的handeler，返回值类型可以用int表示**
+	**需要注意的是函数signal(SIGILL，sighandler)调用的返回值是之前的handler，返回值类型可以用int表示**
 
 - sigaction()　例子如下，可使用`crtl + c`来向进程发送SIGINT信号
 
@@ -134,7 +134,7 @@
 	}
 	```
 
-	**需要注意的是函数sigaction(SIGINT, &sa_int, NULL)调用的第三个argument会被赋值为之前的handeler，这个argument的类型是指向struct sigaction型的指针**
+	**需要注意的是函数sigaction(SIGINT, &sa_int, NULL)调用的第三个argument会被赋值为之前的handler，这个argument的类型是指向struct sigaction型的指针**
 
 ## 5. La terminaison des processus
 
