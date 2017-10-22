@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #define BUFSIZE 512
+#define MAXPENDING 5    /* Max connection requests */
 
 int main(int argc, char **argv) {
   int sfd, s, ns, r;
@@ -47,12 +48,12 @@ int main(int argc, char **argv) {
   for (rp = result; rp != NULL; rp = rp->ai_next) {
 
     /* Creation de la socket */
-    sfd = ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?
+    sfd = socket(rp->ai_family, rp->ai_socktype, 0); 
     if (sfd == -1)
       continue;
 
     /* Association d'un port a la socket */
-    r = ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?
+    r = bind(sfd, rp->ai_addr, rp->ai_addrlen);
     if (r == 0)
       break;            /* Succes */
     close(sfd);
@@ -65,12 +66,12 @@ int main(int argc, char **argv) {
   freeaddrinfo(result); /* Plus besoin */
 
   /* Positionnement de la machine a etats TCP sur listen */
-  ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?
+  listen(sfd, MAXPENDING); 
 
   for (;;) {
     /* Acceptation de connexions */
     fromlen = sizeof(from);
-    ns = ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?
+    ns = accept(sfd, (struct sockaddr *)&from, &fromlen);
     if (ns == -1) {
       perror("accept");
       exit(EXIT_FAILURE);
