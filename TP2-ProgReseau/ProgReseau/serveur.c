@@ -123,10 +123,7 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
       case 0: //we are in the child
         communication(sfd, s, from, fromlen, host, nread, nwrite, ns, message, buf);
-       if (st == -1) {
-        fprintf(stderr, "Error of child process\n");
-        exit(EXIT_FAILURE);
-       }
+        break;
       default: //we are in the father
         signal(SIGCLD, sig_handler);
     }

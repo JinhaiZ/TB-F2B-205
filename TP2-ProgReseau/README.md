@@ -34,3 +34,9 @@ void sig_handler(int signum) {
   printf("child process %d terminated\n", pid);
 }
 ```
+
+## question 3
+
+why use out.flush()
+
+> Flushes the output stream and forces any buffered output bytes to be written out. The general contract of flush is that calling it is an indication that, if any bytes previously written have been buffered by the implementation of the output stream, such bytes should immediately be written to their intended destination.
