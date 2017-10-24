@@ -16,6 +16,8 @@
 
 
 #define BUFSIZE 512
+#define MAXPENDING 5    /* Max connection requests */
+
 enum TypeFichier { NORMAL, REPERTOIRE, ERREUR };
 
 const char* OK200 = "HTTP/1.1 200 OK\r\n\r\n";
@@ -48,11 +50,11 @@ enum TypeFichier typeFichier(char *fichier) {
  * Arguments: le nom du fichier, la socket
  * valeur renvoyee: true si OK, false si erreur
  */
-#define BUSIZE 1048;
+#define BUSIZE 1048
 bool envoiFichier(char *fichier, int soc) {
   int fd;
-  char buf[BUFSIZE];
-  ssize_t nread;
+  char buf[BUSIZE];
+  ssize_t nread, nwrite;
 
   /* A completer.
    * On peut se poser la question de savoir si le fichier est
@@ -63,6 +65,38 @@ bool envoiFichier(char *fichier, int soc) {
    * Note: le fichier peut etre plus gros que votre buffer,
    * de meme il peut etre plus petit...
    */
+  if (access(fichier, R_OK) == 0) {
+    printf("-- access granted --\n");
+    // read all content from a file
+    FILE *f = fopen(fichier, "rb");
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);  //same as rewind(f);
+    char *content = malloc(fsize + 1);
+    fread(content, fsize, 1, f);
+    fclose(f);
+    content[fsize] = 0;
+    // end of reading
+    strcpy(buf, OK200);
+    //TODO: if a file is too big, bug may happend
+    strcat(buf, content);
+    printf("echo buffer:\n%s\n", buf);
+    
+    // send buffer
+    printf("-- send buffer --\n");
+    nwrite = write(soc, buf, strlen(buf));
+    if (nwrite < 0) {
+      printf("-- Error write to socket --\n");
+      perror("write\n");
+      close(soc);
+      return false;
+    }
+  } else {
+    printf("Error access file: %s\n", fichier);
+    perror("Error access file\n");
+    return false;
+  }
+  return true;
 }
 
 
@@ -108,30 +142,47 @@ void communication(int soc, struct sockaddr *from, socklen_t fromlen) {
 
   /* Eventuellement, inserer ici le code pour la reconnaissance de la
    * machine appelante */
-
+  s = getnameinfo((struct sockaddr *)&from, fromlen,
+    host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+  if (s == 0)
+    printf("Debut avec client '%s'\n", host);
+  else
+    fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
 
   /* Reconnaissance de la requete */
   nread = read(soc, buf, BUFSIZE);
   if (nread > 0) {
     if (strncmp(buf, "GET", 3) == 0)
       operation = GET;
+  } else if (nread == 0) {
+    printf("Fin avec client '%s'\n", host);
+    close(soc);
+    return;
   } else {
-    perror("Erreur lecture socket");
+    perror("read");
+    close(soc);
     return;
   }
+  buf[nread] = '\0';
+  printf("-- Request received:\n '%s'\n", buf);
+  printf("-- Type of operation: '%d\n'", operation);
 
   switch (operation) {
     case GET:
+      //GET /index.html HTTP/1.1
       pf = strtok(buf + 4, " ");
+      //nwrite = write(ns, message, strlen(message));
       /* On pointe alors sur le / de "GET /xxx HTTP...
        * strtok() rend l'adresse du premier caractere
        * apres l'espace et termine le mot par '\0'
        */
+      
       pf++; /* pour pointer apres le slash */
       /* pf pointe sur le nom du fichier suivant le / de la requete.
        * Si la requete etait "GET /index.html ...", alors pf pointe sur
        * le "i" de "index.html"
        */
+      printf("-- Name of file: '%s\n'", pf);
       /* si le fichier est un fichier ordinaire, on l'envoie avec la fonction
        * envoiFichier().
        * Si c'est un repertoire, on envoie son listing avec la fonction
@@ -139,8 +190,28 @@ void communication(int soc, struct sockaddr *from, socklen_t fromlen) {
        * Vous pouvez utiliser la fonction typeFichier() ci-dessous pour tester
        * le type du fichier.
        */
-
+      switch (typeFichier(pf)) {
+        case NORMAL:
+          printf("-- Case: File --\n");
+          if (envoiFichier(pf, soc))
+            printf("Successfully responed\n");
+          else
+            printf("Responded failure\n");
+          break;
+        case REPERTOIRE:
+          printf("-- Case: DIR --\n");
+          //envoiRep()
+          break;
+        case ERREUR:
+          printf("-- Case: ERROR --\n");
+          break;
+        default:
+          printf("-- No matched case --\n");
+      }
       /************ A completer ici**********/
+    //case PUT:
+
+    //default:
 
   }
 
@@ -148,18 +219,94 @@ void communication(int soc, struct sockaddr *from, socklen_t fromlen) {
 }
 
 
+void sig_handler(int signum) {
+  printf("child signal recevied\n");
+  int pid = wait(NULL);
+  printf("child process %d terminated\n", pid);
+}
+
+
+
 int main(int argc, char **argv) {
-  int sfd, s, ns;
+  int pid, st, sfd, s, ns, r;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
+  char buf[BUFSIZE];
+  ssize_t nread, nwrite;
   struct sockaddr_storage from;
   socklen_t fromlen;
+  char host[NI_MAXHOST];
+
+  //char *message = "Message a envoyer: ";
 
   if (argc != 2) {
     printf("Usage: %s  port_serveur\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  /* Inserer ici le code d'un serveur TCP concurent */
+  /* Construction de l'adresse locale (pour bind) */
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_INET6;           /* Force IPv6 */
+  hints.ai_socktype = SOCK_STREAM;      /* Stream socket */
+  hints.ai_flags = AI_PASSIVE;          /* Adresse IP joker */
+  hints.ai_flags |= AI_V4MAPPED|AI_ALL; /* IPv4 remapped en IPv6 */
+  hints.ai_protocol = 0;                /* Any protocol */
 
+  s = getaddrinfo(NULL, argv[1], &hints, &result);
+  if (s != 0) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+    exit(EXIT_FAILURE);
+  }
+
+  /* getaddrinfo() retourne une liste de structures d'adresses.
+     On essaie chaque adresse jusqu'a ce que bind(2) reussisse.
+     Si socket(2) (ou bind(2)) echoue, on (ferme la socket et on)
+     essaie l'adresse suivante. cf man getaddrinfo(3) */
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+
+    /* Creation de la socket */
+    sfd = socket(rp->ai_family, rp->ai_socktype, 0); 
+    if (sfd == -1)
+      continue;
+
+    /* Association d'un port a la socket */
+    r = bind(sfd, rp->ai_addr, rp->ai_addrlen);
+    if (r == 0)
+      break;            /* Succes */
+    close(sfd);
+  }
+
+  if (rp == NULL) {     /* Aucune adresse valide */
+    perror("bind");
+    exit(EXIT_FAILURE);
+  }
+  freeaddrinfo(result); /* Plus besoin */
+
+  /* Positionnement de la machine a etats TCP sur listen */
+  listen(sfd, MAXPENDING); 
+
+  for (;;) {
+    /* Acceptation de connexions */
+    fromlen = sizeof(from);
+    ns = accept(sfd, (struct sockaddr *)&from, &fromlen);
+    if (ns == -1) {
+      perror("accept");
+      exit(EXIT_FAILURE);
+    }
+
+    pid = fork();
+
+    switch(pid) {
+      case -1: //problem
+        fprintf(stderr, "Error of server\n");
+        exit(EXIT_FAILURE);
+      case 0: //we are in the child
+        printf("We are in the child\n");
+        communication(ns, (struct sockaddr *)&from, fromlen);
+        break;
+      default: //we are in the father
+        printf("we are in the father\n");
+        signal(SIGCLD, sig_handler);
+    }
+  }
 }
