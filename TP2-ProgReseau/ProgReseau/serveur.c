@@ -11,8 +11,46 @@
 #define BUFSIZE 512
 #define MAXPENDING 5    /* Max connection requests */
 
+void communication(int sfd, int s, struct sockaddr_storage from, int fromlen, char* host, ssize_t nread, ssize_t nwrite, int ns, char* message, char* buf) {
+  /* Reconnaissance de la machine cliente */
+  close(sfd); // close father socket 
+  s = getnameinfo((struct sockaddr *)&from, fromlen,
+  host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+  if (s == 0)
+    printf("Debut avec client '%s'\n", host);
+  else
+    fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+
+  for (;;) {
+    nwrite = write(ns, message, strlen(message));
+    if (nwrite < 0) {
+      perror("write");
+      close(ns);
+      break;
+    }
+    nread = read(ns, buf, BUFSIZE);
+    if (nread == 0) {
+      printf("Fin avec client '%s'\n", host);
+      close(ns);
+      break;
+    } else if (nread < 0) {
+      perror("read");
+      close(ns);
+      break;
+    }
+    buf[nread] = '\0';
+    printf("Message recu '%s'\n", buf);
+  }  
+}
+
+void sig_handler(int signum) {
+  printf("child signal recevied\n");
+  int pid = wait(NULL);
+  printf("child process %d terminated\n", pid);
+}
+
 int main(int argc, char **argv) {
-  int sfd, s, ns, r;
+  int pid, st, sfd, s, ns, r;
   struct addrinfo hints;
   struct addrinfo *result, *rp;
   char buf[BUFSIZE];
@@ -77,33 +115,20 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
 
-    /* Reconnaissance de la machine cliente */
-    s = getnameinfo((struct sockaddr *)&from, fromlen,
-			host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-    if (s == 0)
-      printf("Debut avec client '%s'\n", host);
-    else
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+    pid = fork();
 
-    for (;;) {
-      nwrite = write(ns, message, strlen(message));
-      if (nwrite < 0) {
-	perror("write");
-	close(ns);
-	break;
-      }
-      nread = read(ns, buf, BUFSIZE);
-      if (nread == 0) {
-	printf("Fin avec client '%s'\n", host);
-	close(ns);
-	break;
-      } else if (nread < 0) {
-	perror("read");
-	close(ns);
-	break;
-      }
-      buf[nread] = '\0';
-      printf("Message recu '%s'\n", buf);
+    switch(pid) {
+      case -1: //problem
+        fprintf(stderr, "Error of server\n");
+        exit(EXIT_FAILURE);
+      case 0: //we are in the child
+        communication(sfd, s, from, fromlen, host, nread, nwrite, ns, message, buf);
+       if (st == -1) {
+        fprintf(stderr, "Error of child process\n");
+        exit(EXIT_FAILURE);
+       }
+      default: //we are in the father
+        signal(SIGCLD, sig_handler);
     }
   }
 }
