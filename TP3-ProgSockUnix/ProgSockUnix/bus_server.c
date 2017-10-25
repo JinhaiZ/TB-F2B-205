@@ -27,7 +27,8 @@ void hdlr_fin(int sig) {
 
 
 int main(int argc, char **argv) {
-  struct sockaddr_un a;
+  struct sockaddr_un a, from;
+  socklen_t fromlen;
   int * clients;	/* sockets des clients */
   int max_clients;	/* nombre de clients */
   char buffer[BUF_SIZE];
@@ -49,10 +50,10 @@ int main(int argc, char **argv) {
   signal(SIGPIPE, SIG_IGN);
   
   /* pour une terminaison propre sur QUIT TERM INT SEGV... */
-  signal(?????,  hdlr_fin);
-  signal(?????, hdlr_fin);
-  signal(?????, hdlr_fin);
-  signal(?????, hdlr_fin);
+  signal(SIGQUIT, hdlr_fin);
+  signal(SIGTERM, hdlr_fin);
+  signal(SIGINT, hdlr_fin);
+  signal(SIGSEGV, hdlr_fin);
 
   max_clients = atoi(argv[2]);
   clients = (int *) malloc( max_clients * sizeof(int) );
@@ -61,7 +62,7 @@ int main(int argc, char **argv) {
 
 
   /* creation de la socket serveur */
-  if ((server = ????????????????) < 0) {
+  if ((server = socket(PF_UNIX, SOCK_SEQPACKET, 0)) < 0) {
     perror("socket()");
     exit(EXIT_FAILURE);
   }
@@ -69,15 +70,15 @@ int main(int argc, char **argv) {
   /* preparation de la structure d'adresse de la socket serveur sur 
      laquelle on attend les connexions */
   memset(&a, 0, sizeof(a));
-  a.sun_family = ?????????;
-  sockname = strncpy(???????????????????????/);
+  a.sun_family = AF_UNIX;
+  sockname = strncpy(a.sun_path, argv[1], 108);
 
-  if (bind(???????????????????????) < 0) {
+  if (bind(server, (struct sockaddr *) &a, sizeof(struct sockaddr_un)) < 0) {
     perror("bind()");
     close(server);
     exit(EXIT_FAILURE);
   }
-  if ( listen(?????????????????) < 0 ) {
+  if ( listen(server, 10) < 0 ) {
     perror("socket()"); 
     close(server);
     exit(EXIT_FAILURE);
@@ -105,7 +106,7 @@ int main(int argc, char **argv) {
     }
 
     /* Se bloque en attente de quelque chose d'interessant sur une socket */
-    r = select(????????????????????????);
+    r = select(nfds + 1, &rd_set, 0, 0, 0);
 
     if (r == -1 && errno == EINTR)
       continue;
@@ -114,8 +115,10 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
 
+    fromlen = sizeof(from);
+
     if (FD_ISSET(server, &rd_set)) {	/* on a une nouvelle connection */
-      r = accept(???????????????????????);
+      r = accept(server, (struct sockaddr *) &from, &fromlen);
       if (r < 0) {
 	perror("accept()");
       } else {
@@ -139,33 +142,35 @@ int main(int argc, char **argv) {
       if ( (clients[i] > 0) && FD_ISSET(clients[i], &rd_set)) {
         /* Hypothese : on lit le paquet d'un seul coup !
            Prevoir une buffer assez grand */
-        rd_sz = recv(?????????????????????);
+        rd_sz = recv(clients[i], buffer, BUF_SIZE, 0);
 	if (rd_sz < 0) {
 	  perror("recv()");
 	  fprintf(stderr, "...probleme avec le client %d\n",i);
-          shutdown(????????????);
-          clients[i] = ???????????;
+          shutdown(clients[i], SHUT_RDWR);
+          close(clients[i]);
+          clients[i] = -1;
         } else if (rd_sz == 0) {
           printf("Le client %d et partit.\n", i);
-          close(??????????);
-          clients[i] = ??????????;
+          close(clients[i]);
+          clients[i] = 0;
         } else if (rd_sz > 0) {
           printf("Reception de %d octets du client %d : [\n", rd_sz, i);
 	  /* On ecrit sur la sortie standard */
-          write(??????????????????);
-          printf("]\n");
+          write(STDOUT_FILENO, buffer, rd_sz);
           /* Envoie le paquet (en un seul coup) a tous les autres clients */
           for (j=0; j<max_clients; j++) {
             if ( (clients[j] > 0) && (i != j) ) {
-              wr_sz = send(??????????????????);
+              wr_sz = send(clients[j], buffer, rd_sz, 0);
               if ( wr_sz < 0 ) {
                 /* cloture du client j */
                 perror("send()");
                 fprintf(stderr, "...probleme avec le client %d\n",j);
-               ????????????????????????
+                shutdown(clients[j], SHUT_RDWR);
+                close(clients[j]);
+                clients[j] = -1;
               } else if (wr_sz == 0 ) {
                 printf("Le client %d et partit.\n", j);
-                ?????????????????
+                close(clients[j]);
               } else 
                 printf("Envoie de %d octets au client %d.\n", wr_sz, j);
             }

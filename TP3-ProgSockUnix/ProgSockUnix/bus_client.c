@@ -45,13 +45,13 @@ int main(int argc, char **argv) {
   signal(SIGPIPE, SIG_IGN);
   
   /* pour une terminaison propre sur QUIT TERM INT SEGV... */
-  signal(?????, hdlr_fin);
-  signal(?????, hdlr_fin);
-  signal(?????, hdlr_fin);
-  signal(?????, hdlr_fin);
+  signal(SIGQUIT, hdlr_fin);
+  signal(SIGTERM, hdlr_fin);
+  signal(SIGINT, hdlr_fin);
+  signal(SIGSEGV, hdlr_fin);
 
   /* creation de la socket client */
-  if ((server = ?????????????????????) < 0) {
+  if ((server = socket(PF_UNIX, SOCK_SEQPACKET, 0)) < 0) {
     perror("socket()");
     exit(EXIT_FAILURE);
   }
@@ -59,11 +59,11 @@ int main(int argc, char **argv) {
   /* preparation de la structure d'adresse de la socket serveur sur 
      laquelle on va se connecter */
   memset(&a, 0, sizeof(a)); /* nettoyage de la structure */
-  a.sun_family = AF_????;   /* famille de l'adresse */
-  strncpy(a.????????????????, argv[1], 108 /*UNIX_PATH_MAX*/);
+  a.sun_family = AF_UNIX;   /* famille de l'adresse */
+  strncpy(a.sun_path, argv[1], 108 /*UNIX_PATH_MAX*/);
 
   /* Connexion au serveur */
-  if (?????????????????????????????? < 0) {
+  if (connect(server, (struct sockaddr *) &a, sizeof(struct sockaddr_un)) < 0) {
     perror("connect()");
     close(server);
     exit(EXIT_FAILURE);
@@ -87,8 +87,7 @@ int main(int argc, char **argv) {
     nfds = max(nfds, STDIN_FILENO);	/* pour le principe */
 
     /* Se bloque en attente de quelque chose d'interessant */
-    r = select(???????????????????????????);
-
+    r = select(nfds + 1, &rd_set, 0, 0, 0);
     if (r == -1 && errno == EINTR)
       continue;
     if (r < 0) {
@@ -99,7 +98,7 @@ int main(int argc, char **argv) {
     if (FD_ISSET(server, &rd_set)) {	/* evenement socket */
       /* Hypothese : on lit le paquet d'un seul coup !
          Prevoir une buffer assez grand */
-      rd_sz = recv(??????????????????????????);
+      rd_sz = recv(server, buffer, BUF_SIZE, 0);
       if (rd_sz < 0) {
         perror("recv()");
         close(server);
@@ -110,8 +109,7 @@ int main(int argc, char **argv) {
       } else if (rd_sz > 0) {
         printf("Reception de %d octets : [\n", rd_sz);
 	/* Ecriture sur le staandard de sortie de ce qui est recu du serveur */
-        write(?????????????????????????);
-        printf("]\n");
+        write(STDOUT_FILENO, buffer, rd_sz);
       }
     }
     
@@ -121,7 +119,7 @@ int main(int argc, char **argv) {
       fgets(buffer, BUF_SIZE, stdin);
       rd_sz = strlen(buffer);
       /* envoi vers le serveur */
-      wr_sz = send(??????????????????????????????);
+      wr_sz = send(server, buffer, rd_sz, 0);
       if (wr_sz < 0) {
         perror("send()");
         close(server);
