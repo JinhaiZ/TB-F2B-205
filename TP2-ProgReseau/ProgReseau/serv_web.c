@@ -142,7 +142,7 @@ void communication(int soc, struct sockaddr *from, socklen_t fromlen) {
 
   /* Eventuellement, inserer ici le code pour la reconnaissance de la
    * machine appelante */
-  s = getnameinfo((struct sockaddr *)&from, fromlen,
+  s = getnameinfo(from, fromlen, // debug: from is already a pointer, use it correctly
     host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
   if (s == 0)
     printf("Debut avec client '%s'\n", host);
@@ -214,7 +214,6 @@ void communication(int soc, struct sockaddr *from, socklen_t fromlen) {
     //default:
 
   }
-
   close(soc);
 }
 
@@ -236,6 +235,7 @@ int main(int argc, char **argv) {
   struct sockaddr_storage from;
   socklen_t fromlen;
   char host[NI_MAXHOST];
+  signal(SIGCLD, sig_handler);
 
   //char *message = "Message a envoyer: ";
 
@@ -301,12 +301,13 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error of server\n");
         exit(EXIT_FAILURE);
       case 0: //we are in the child
+        // life cycle of child
         printf("We are in the child\n");
+        close(sfd);
         communication(ns, (struct sockaddr *)&from, fromlen);
-        break;
+        exit(EXIT_SUCCESS); 
       default: //we are in the father
         printf("we are in the father\n");
-        signal(SIGCLD, sig_handler);
     }
   }
 }

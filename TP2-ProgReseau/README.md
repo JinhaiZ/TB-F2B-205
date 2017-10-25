@@ -40,3 +40,37 @@ void sig_handler(int signum) {
 why use out.flush()
 
 > Flushes the output stream and forces any buffered output bytes to be written out. The general contract of flush is that calling it is an indication that, if any bytes previously written have been buffered by the implementation of the output stream, such bytes should immediately be written to their intended destination.
+
+## question 4
+
+调用函数时注意匹配类型
+
+```c
+int getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                       char *host, socklen_t hostlen,
+                       char *serv, socklen_t servlen, int flags);
+```
+
+signal handler申明一次就可以，不要在循环里使用
+
+```c
+signal(SIGCLD, sig_handler);
+```
+
+注意子进程的生存周期，完成任务后记得要退出`exit(EXIT_SUCCESS); `
+
+```c
+switch(pid) {
+  case -1: //problem
+    fprintf(stderr, "Error of server\n");
+    exit(EXIT_FAILURE);
+  case 0: //we are in the child
+    // life cycle of child
+    printf("We are in the child\n");
+    close(sfd);
+    communication(ns, (struct sockaddr *)&from, fromlen);
+    exit(EXIT_SUCCESS); 
+  default: //we are in the father
+    printf("we are in the father\n");
+}
+```
