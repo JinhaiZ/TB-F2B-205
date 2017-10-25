@@ -43,7 +43,7 @@ why use out.flush()
 
 ## question 4
 
-调用函数时注意匹配类型
+### 调用函数时注意匹配类型
 
 ```c
 int getnameinfo(const struct sockaddr *sa, socklen_t salen,
@@ -57,7 +57,9 @@ signal handler申明一次就可以，不要在循环里使用
 signal(SIGCLD, sig_handler);
 ```
 
-注意子进程的生存周期，完成任务后记得要退出`exit(EXIT_SUCCESS); `
+### 注意子进程的生存周期
+
+完成任务后记得要退出`exit(EXIT_SUCCESS); `
 
 ```c
 switch(pid) {
@@ -73,4 +75,56 @@ switch(pid) {
   default: //we are in the father
     printf("we are in the father\n");
 }
+```
+
+### 这个程序的安全隐患
+
+http://localhost:8888/index.html/../../some-file-in-root-folder
+
+如果有类似上面的http请求，这个程序会返回真实的父目录中的文件
+
+### 如何读取文件
+
+```c
+char buf[SIZE];
+fd = open("file_path");
+
+n = read(fd, buf, SIZE);
+write(soc, buf, n);
+
+
+```
+
+## question 5
+
+### `getaddrinfo`函数的作用
+
+````c
+int getaddrinfo(const char *node, const char *service,
+                const struct addrinfo *hints,
+                struct addrinfo **res);
+```
+
+> Given node and service, which identify an Internet host and a service, getaddrinfo() returns one or more addrinfo structures, each of which contains an Internet address that can be specified in a call to bind(2) or connect(2).  The getaddrinfo() function  combines the functionality provided by the gethostbyname(3) and getservbyname(3) functions into a single interface, but unlike the latter functions, getaddrinfo() is reentrant and allows programs to eliminate IPv4-versus-IPv6 dependencies.
+
+### 注意sendto和recvfrom的函数签名
+
+尤其是addrlen参数的类型要求是不一样的
+
+```c
+ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+              const struct sockaddr *dest_addr, socklen_t addrlen);
+```
+
+```c
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                struct sockaddr *src_addr, socklen_t *addrlen)
+```
+
+### 问题
+
+向不存在的地址发送消息时将得到下列错误
+
+```bash
+sendto: Network is unreachable
 ```
