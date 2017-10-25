@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   freeaddrinfo(result); /* Plus besoin */
 
   /* Force la taille du buffer de reception de la socket */
-  rsz = 800000;
+  rsz = 80000;
   if ( setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &rsz, sizeof(rsz)) == 0 )
     printf("SO_RCVBUF apres forcage: %d octets\n", rsz);
   else

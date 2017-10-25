@@ -128,3 +128,20 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 ```bash
 sendto: Network is unreachable
 ```
+
+## question 6
+
+用ipv4发送信息，信息大小限制于65507字符
+
+0xffff - (sizeof(IP Header) + sizeof(UDP Header))
+65535 - (20 + 8) = 65507
+
+用ipv6发送信息，信息大小限制于65527字符
+
+0xffff - sizeof(UDP Header)
+65535 - 8 = 65527
+
+```bash
+./emetteur localhost 6888 65507
+./emetteur ip6-localhost 6888 65527
+```
