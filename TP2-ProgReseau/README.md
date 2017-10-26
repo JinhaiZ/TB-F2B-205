@@ -9,6 +9,7 @@
 建立子进程
 fork()
 管理不同进程
+
 ```c
 switch(pid) {
     case -1: //problem
@@ -97,9 +98,9 @@ write(soc, buf, n);
 
 ## question 5
 
-### `getaddrinfo`函数的作用
+### getaddrinfo函数的作用
 
-````c
+```c
 int getaddrinfo(const char *node, const char *service,
                 const struct addrinfo *hints,
                 struct addrinfo **res);
