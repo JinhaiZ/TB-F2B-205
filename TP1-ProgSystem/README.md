@@ -207,9 +207,9 @@
 
 ## 7. Les tubes de communication
 
-![父子进程通过pipe通信图解](pipe.jpg)
+![父子进程通过pipe通信图解](./pipe.jpg)
 
-![管道的读写规则](pipe2.jpg)
+![管道的读写规则](./pipe2.jpg)
 
 参考
 1. [管道---pipe函数实例讲解 ](http://blog.chinaunix.net/uid-16987232-id-4046436.html)
