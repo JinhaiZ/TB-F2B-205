@@ -11,9 +11,9 @@
 #define BUFSIZE 512
 #define MAXPENDING 5    /* Max connection requests */
 
-void communication(int sfd, int s, struct sockaddr_storage from, int fromlen, char* host, ssize_t nread, ssize_t nwrite, int ns, char* message, char* buf) {
+void communication(int s, struct sockaddr_storage from, int fromlen, char* host, ssize_t nread, ssize_t nwrite, int ns, char* message, char* buf) {
   /* Reconnaissance de la machine cliente */
-  close(sfd); // close father socket 
+   
   s = getnameinfo((struct sockaddr *)&from, fromlen,
   host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
   if (s == 0)
@@ -122,9 +122,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error of server\n");
         exit(EXIT_FAILURE);
       case 0: //we are in the child
-        communication(sfd, s, from, fromlen, host, nread, nwrite, ns, message, buf);
-        break;
+        close(sfd); // close father socket
+        communication(s, from, fromlen, host, nread, nwrite, ns, message, buf);
+        exit(EXIT_SUCCESS);
       default: //we are in the father
+        close(ns);
         signal(SIGCLD, sig_handler);
     }
   }
