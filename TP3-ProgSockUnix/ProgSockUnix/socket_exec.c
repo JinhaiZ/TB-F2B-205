@@ -21,11 +21,11 @@ static int mysocketpair(int d, int type, int protocol, int fd[2])
 	
 	listener = socket(d, type, protocol);
 
-  memset(&sock2, 0, sizeof(struct sockaddr_in));
+ 	memset(&sock2, 0, sizeof(struct sockaddr_in));
 
-  sock2.sin_family = d;
+  	sock2.sin_family = d;
 
-  bind(listener, (struct sockaddr *)&sock2, sizeof(sock2));
+  	bind(listener, (struct sockaddr *)&sock2, sizeof(sock2));
 
 	listen(listener, 1);
 
@@ -33,7 +33,7 @@ static int mysocketpair(int d, int type, int protocol, int fd[2])
 
 	fd[1] = socket(d, type, protocol);
 
-	//set_blocking(fd[1], 0);
+	set_blocking(fd[1], 0);
 
 	sock.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
@@ -47,7 +47,7 @@ static int mysocketpair(int d, int type, int protocol, int fd[2])
 
 	close(listener);
 
-	//set_blocking(fd[1], 1);
+	set_blocking(fd[1], 1);
 
 	return 0;
 }

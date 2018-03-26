@@ -5,8 +5,16 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <signal.h>
+#include <stdbool.h>
 
 #define BUFSIZE 512
+
+// question 8
+int urgent = false;
+void sighandlerQUIT(int signum) {
+	urgent = !urgent;
+}
 
 int main(int argc, char **argv) {
 	int s, sfd, r;
@@ -14,6 +22,10 @@ int main(int argc, char **argv) {
 	struct addrinfo *result, *rp;
 	char buf[BUFSIZE], *pt;
 	ssize_t nread, nwrite;
+	struct sigaction sa_quit;
+
+	sa_quit.sa_handler = &sighandlerQUIT;
+	sigaction(SIGQUIT, &sa_quit, NULL);
 
 	if (argc != 3) {
 		printf("Usage: %s nom_machine_distante port_serveur\n", argv[0]);
@@ -83,17 +95,21 @@ int main(int argc, char **argv) {
 		/* Affichage ecran du message lu sur la socket */
 		printf("Message recu '%s'", buf);
 
-		/* Lecture clavier. Si on tape <Control-D>, gets() rend NULL
-		 * <Control-D> symbolise la fin de fichier, ici la terminaison
-		 * du client */
-		pt = fgets(buf, BUFSIZE, stdin);
-		if (pt == NULL) {
-			printf("Sortie du client\n");
-			exit(EXIT_SUCCESS);
+		if (urgent) {
+			nwrite = send(sfd, 'z', 1, MSG_OOB);
+		} else {
+			/* Lecture clavier. Si on tape <Control-D>, gets() rend NULL
+			* <Control-D> symbolise la fin de fichier, ici la terminaison
+			* du client */
+			pt = fgets(buf, BUFSIZE, stdin);
+			if (pt == NULL) {
+				printf("Sortie du client\n");
+				exit(EXIT_SUCCESS);
+			}
+			nwrite = write(sfd, buf, strlen(buf));
 		}
-		nwrite = write(sfd, buf, strlen(buf));
 		if (nwrite < 0) {
-			perror("write");
+			perror("write or send");
 			exit(EXIT_FAILURE);
 		}
 	}
